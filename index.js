@@ -220,5 +220,39 @@ async function startBot() {
         }
     })
 }
+let pairingCodeRequested = false // TAMBAHIN INI DI ATAS startBot()
 
+sock.ev.on("connection.update", async (update) => {
+    const { connection, lastDisconnect } = update
+    
+    if (connection === "connecting") {
+        if (!sock.authState.creds.registered && !pairingCodeRequested) {
+            pairingCodeRequested = true // BIAR CUMA MINTA 1X
+            const phoneNumber = "6283844376032"
+            await new Promise(r => setTimeout(r, 3000))
+            try {
+                let code = await sock.requestPairingCode(phoneNumber)
+                code = code?.match(/.{1,4}/g)?.join("-") || code
+                console.log(`PAIRING CODE LU CUMA 1: ${code}`)
+            } catch (e) {
+                console.log("Gagal minta kode:", e)
+                pairingCodeRequested = false // reset kalo gagal
+            }
+        }
+    }
+    
+    if (connection === "close") {
+        let reason = lastDisconnect?.error?.output?.statusCode
+        if (reason !== DisconnectReason.loggedOut) {
+            console.log("Reconnecting...")
+            pairingCodeRequested = false // reset pas reconnect
+            startBot()
+        } else {
+            console.log("Logout, hapus session dulu")
+        }
+    } else if (connection === "open") {
+        console.log("BOT CONNECTED - 100+ FITUR ON")
+        pairingCodeRequested = true // udah connect ga perlu kode lagi
+    }
+})
 startBot()
