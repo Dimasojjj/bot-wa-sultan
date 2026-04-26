@@ -31,7 +31,7 @@ async function connectBot() {
                 connectBot()
             }
         }
-        if (connection === "open") console.log("BOT SULTAN FIX ERROR ON")
+        if (connection === "open") console.log("BOT SULTAN API BARU ON")
     })
 
     sock.ev.on("creds.update", saveCreds)
@@ -49,18 +49,17 @@ async function connectBot() {
             switch (command) {
                 case "menu": {
                     let jam = moment.tz("Asia/Jakarta").format("HH:mm:ss")
-                    reply(`*BOT SULTAN FIX*\nJam: ${jam} WIB\n\n*AI*\n.ai <tanya>\n\n*DOWNLOADER*\n.tiktok <link>\n.play <judul>\n\n*STIKER*\n.sticker\n.brat <teks>\n\n*FUN*\n.meme\n.quotes\n.jodoh <nama|nama>\n\n*INFO*\n.gempa\n.cuaca <kota>\n\n*GAME*\n.tebakgambar\n\nTes.ping`)
+                    reply(`*BOT SULTAN FIX 404*\nJam: ${jam} WIB\n\n*AI*\n.ai <tanya>\n\n*DOWNLOADER*\n.tiktok <link>\n.play <judul>\n\n*STIKER*\n.sticker\n.brat <teks>\n\n*FUN*\n.meme\n.quotes\n.jodoh <nama|nama>\n\n*INFO*\n.gempa\n\n*GAME*\n.tebakgambar\n\nTes.ping`)
                 } break
 
-                case "ping": reply("Pong! Aman bro")
+                case "ping": reply("Pong! Aman bro " + (new Date() - new Date(m.messageTimestamp * 1000)) + "ms")
                 break
 
                 case "ai": {
                     if (!q) return reply("Nanya apa?.ai cara bahagia")
                     reply("Mikirr...")
-                    // API CADANGAN 1
-                    let { data } = await axios.get(`https://api.siputzx.my.id/api/ai/gpt3?prompt=Kamu asisten lucu&content=${encodeURIComponent(q)}`)
-                    reply(data.data)
+                    let { data } = await axios.get(`https://api.ryzendesu.vip/api/ai/v2/chatgpt?text=${encodeURIComponent(q)}`)
+                    reply(data.response)
                 } break
 
                 case "sticker": case "s": {
@@ -75,37 +74,34 @@ async function connectBot() {
                 } break
 
                 case "tiktok": {
-                    if (!q) return reply(".tiktok link")
+                    if (!q) return reply(".tiktok https://vt.tiktok.com/xxx")
                     reply("Download...")
-                    // API CADANGAN 2
-                    let { data } = await axios.get(`https://api.siputzx.my.id/api/d/tiktok?url=${q}`)
+                    let { data } = await axios.get(`https://api.ryzendesu.vip/api/downloader/ttdl?url=${q}`)
                     await sock.sendMessage(from, { video: { url: data.data.video }, caption: "Nih no WM" }, { quoted: m })
                 } break
 
                 case "play": {
                     if (!q) return reply(".play dermaga biru")
                     reply("Cari lagu...")
-                    // API CADANGAN 3
-                    let { data } = await axios.get(`https://api.siputzx.my.id/api/d/ytmp3?query=${encodeURIComponent(q)}`)
-                    await sock.sendMessage(from, { audio: { url: data.data.dl }, mimetype: 'audio/mpeg' }, { quoted: m })
+                    let { data } = await axios.get(`https://api.ryzendesu.vip/api/downloader/ytmp3?query=${encodeURIComponent(q)}`)
+                    await sock.sendMessage(from, { audio: { url: data.data.download.url }, mimetype: 'audio/mpeg' }, { quoted: m })
                 } break
 
                 case "brat": {
                     if (!q) return reply(".brat halo")
                     reply("Bikin stiker...")
-                    // API CADANGAN 4
-                    let { data } = await axios.get(`https://api.siputzx.my.id/api/m/brat?text=${encodeURIComponent(q)}`, { responseType: 'arraybuffer' })
+                    let { data } = await axios.get(`https://api.ryzendesu.vip/api/image/brat?text=${encodeURIComponent(q)}`, { responseType: 'arraybuffer' })
                     await sock.sendMessage(from, { sticker: data }, { quoted: m })
                 } break
 
                 case "meme": {
-                    let { data } = await axios.get(`https://api.siputzx.my.id/api/meme`)
-                    await sock.sendMessage(from, { image: { url: data.data.url }, caption: "Meme" }, { quoted: m })
+                    let { data } = await axios.get(`https://api.ryzendesu.vip/api/random/memeindo`)
+                    await sock.sendMessage(from, { image: { url: data.url }, caption: "Meme" }, { quoted: m })
                 } break
 
                 case "quotes": {
-                    let { data } = await axios.get(`https://api.siputzx.my.id/api/quotes`)
-                    reply(`"${data.data.quote}"\n\n- ${data.data.author}`)
+                    let { data } = await axios.get(`https://api.ryzendesu.vip/api/random/quotes`)
+                    reply(`"${data.data.quotes}"\n\n- ${data.data.author}`)
                 } break
 
                 case "jodoh": {
@@ -116,26 +112,19 @@ async function connectBot() {
                 } break
 
                 case "gempa": {
-                    let { data } = await axios.get(`https://api.siputzx.my.id/api/gempa`)
+                    let { data } = await axios.get(`https://api.ryzendesu.vip/api/information/gempa`)
                     let i = data.data
-                    reply(`INFO GEMPA\n\nLokasi: ${i.wilayah}\nMagnitudo: ${i.magnitudo}\nTanggal: ${i.tanggal}`)
-                } break
-
-                case "cuaca": {
-                    if (!q) return reply(".cuaca Jakarta")
-                    let { data } = await axios.get(`https://api.siputzx.my.id/api/cuaca?query=${q}`)
-                    let d = data.data
-                    reply(`CUACA ${d.lokasi}\n\n${d.cuaca}\nSuhu: ${d.suhu}`)
+                    reply(`INFO GEMPA\n\nLokasi: ${i.wilayah}\nMagnitudo: ${i.magnitude}\nKedalaman: ${i.kedalaman}\nWaktu: ${i.waktu}`)
                 } break
 
                 case "tebakgambar": {
-                    let { data } = await axios.get(`https://api.siputzx.my.id/api/game/tebakgambar`)
+                    let { data } = await axios.get(`https://api.ryzendesu.vip/api/game/tebakgambar`)
                     await sock.sendMessage(from, { image: { url: data.data.image }, caption: `Tebak Gambar\n\nClue: ${data.data.answer.replace(/[aiueo]/gi, '_')}` }, { quoted: m })
                 } break
             }
         } catch (e) {
             console.log("ERROR COMMAND:", command, e.message)
-            reply(`Error bro: ${e.message}\nCoba lagi / lapor owner`)
+            reply(`Error bro: ${e.message}\nCoba command lain dulu`)
         }
     })
 }
