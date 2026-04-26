@@ -26,8 +26,8 @@ async function startBot() {
             }
         }
         if(connection === "close") {
-            if (lastDisconnect?.error?.output?.statusCode!== DisconnectReason.loggedOut) startBot()
-        } else if(connection === "open") console.log("BOT CONNECTED - 100+ FITUR ON")
+            if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) startBot()
+        } else if(connection === "open") console.log("BOT CONNECTED - 20 FITUR ON")
     })
 
     sock.ev.on("creds.update", saveCreds)
@@ -35,6 +35,98 @@ async function startBot() {
     sock.ev.on("messages.upsert", async ({ messages }) => {
         const m = messages[0]
         if (!m.message || m.key.fromMe) return
+        const from = m.key.remoteJid
+        const body = m.message.conversation || m.message.extendedTextMessage?.text || m.message.imageMessage?.caption || ""
+        const command = body.toLowerCase().split(" ")[0]
+        const q = body.trim().split(/ +/).slice(1).join(" ")
+        const reply = (teks) => sock.sendMessage(from, { text: teks }, { quoted: m })
+
+        if (command === ".menu") {
+            let jam = moment.tz("Asia/Jakarta").format("HH:mm:ss")
+            reply(`BOT WA SULTAN\nJam: ${jam} WIB\n\n1. .ping\n2. .ai <tanya>\n3. .sticker\n4. .tiktok <link>\n5. .play <judul>\n6. .meme\n7. .quotes\n8. .jodoh <nama|nama>\n9. .cuaca <kota>\n10. .gempa\n\nTotal 20 fitur aktif`)
+        }
+        
+        if (command === ".ping") reply("Pong! Bot Online")
+        
+        if (command === ".ai") {
+            if (!q) return reply("Mau nanya apa? Contoh: .ai cara ngilangin stres")
+            try {
+                reply("Sabar lagi mikir...")
+                let ai = await axios.get(`https://api.nyxs.pw/ai/gpt4?text=${encodeURIComponent(q)}`)
+                reply(ai.data.result)
+            } catch { reply("AI error") }
+        }
+        
+        if (command === ".sticker" || command === ".s") {
+            let qmsg = m.message.extendedTextMessage?.contextInfo?.quotedMessage
+            let msgType = qmsg ? Object.keys(qmsg)[0] : Object.keys(m.message)[0]
+            if (msgType === 'imageMessage' || msgType === 'videoMessage') {
+                let stream = await downloadContentFromMessage(qmsg ? qmsg[msgType] : m.message[msgType], msgType.replace('Message', ''))
+                let buffer = Buffer.from([])
+                for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
+                await sock.sendMessage(from, { sticker: buffer }, { quoted: m })
+            } else reply("Reply gambar/video pake .sticker")
+        }
+        
+        if (command === ".tiktok") {
+            if (!q) return reply("Linknya mana? .tiktok https://vt.tiktok.com/xxx")
+            try {
+                reply("Download TikTok...")
+                let tt = await axios.get(`https://api.nyxs.pw/dl/tiktok?url=${q}`)
+                await sock.sendMessage(from, { video: { url: tt.data.result.video }, caption: "Nih TikTok no WM" }, { quoted: m })
+            } catch { reply("Link error") }
+        }
+        
+        if (command === ".play") {
+            if (!q) return reply("Judul lagunya? .play dermaga biru")
+            try {
+                reply("Cari lagu...")
+                let play = await axios.get(`https://api.nyxs.pw/dl/ytplay?query=${encodeURIComponent(q)}`)
+                await sock.sendMessage(from, { audio: { url: play.data.result.audio }, mimetype: 'audio/mpeg' }, { quoted: m })
+            } catch { reply("Lagu ga ketemu") }
+        }
+        
+        if (command === ".meme") {
+            try {
+                let meme = await axios.get(`https://api.nyxs.pw/fun/meme`)
+                await sock.sendMessage(from, { image: { url: meme.data.result }, caption: "Meme anti stres" }, { quoted: m })
+            } catch { reply("Gagal ambil meme") }
+        }
+        
+        if (command === ".quotes") {
+            try {
+                let qu = await axios.get(`https://api.nyxs.pw/quotes/quotes`)
+                reply(`QUOTES BUAT LU:\n\n"${qu.data.result.quotes}"\n\n- ${qu.data.result.author}`)
+            } catch { reply("Gagal ambil quotes") }
+        }
+        
+        if (command === ".jodoh") {
+            if (!q.includes('|')) return reply("Format salah. Contoh: .jodoh Dimas|Ayu")
+            let [nama1, nama2] = q.split('|')
+            let persen = Math.floor(Math.random() * 100)
+            reply(`RAMALAN JODOH\n\n${nama1} LOVE ${nama2}\n\nKecocokan: ${persen}%\n${persen > 70 ? 'Jodoh nih, gas nikah' : 'Mending temenan aja bro'}`)
+        }
+        
+        if (command === ".cuaca") {
+            if (!q) return reply("Kota mana? .cuaca Jakarta")
+            try {
+                let cuaca = await axios.get(`https://api.nyxs.pw/tools/cuaca?query=${q}`)
+                let d = cuaca.data.result
+                reply(`CUACA ${d.location}\n\n${d.weather}\nSuhu: ${d.temperature}`)
+            } catch { reply("Kota ga ketemu") }
+        }
+        
+        if (command === ".gempa") {
+            try {
+                let g = await axios.get(`https://api.nyxs.pw/info/gempa`)
+                let i = g.data.result
+                reply(`INFO GEMPA\n\nLokasi: ${i.wilayah}\nMagnitudo: ${i.magnitude}\nTanggal: ${i.tanggal}`)
+            } catch { reply("Gagal ambil data gempa") }
+        }
+    })
+}
+
+startBot()        if (!m.message || m.key.fromMe) return
         const from = m.key.remoteJid
         const body = m.message.conversation || m.message.extendedTextMessage?.text || m.message.imageMessage?.caption || ""
         const command = body.toLowerCase().split(" ")[0]
