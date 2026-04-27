@@ -10,16 +10,14 @@ const fs = require("fs")
 ffmpeg.setFfmpegPath(ffmpegPath)
 let pairingCodeRequested = false
 
-// LIST MEME INDO OFFLINE - ANTI API TURU
+// DATABASE OFFLINE - ANTI API TURU
 const memeIndo = [
     "https://i.ibb.co/3W2Z8gX/meme1.jpg",
     "https://i.ibb.co/LJYJz0K/meme2.jpg",
     "https://i.ibb.co/6bW2p8z/meme3.jpg",
     "https://i.ibb.co/2N7qKjv/meme4.jpg",
     "https://i.ibb.co/7Y8qKjv/meme5.jpg",
-    "https://i.ibb.co/9yY8qKj/meme6.jpg",
-    "https://i.ibb.co/3yY8qKj/meme7.jpg",
-    "https://i.ibb.co/5yY8qKj/meme8.jpg"
+    "https://i.ibb.co/9yY8qKj/meme6.jpg"
 ]
 
 const quotesIndo = [
@@ -33,19 +31,32 @@ const quotesIndo = [
 ]
 
 const dareList = [
-    "Chat mantan lu bilang 'kangen'",
-    "Update status WA 'Lagi galau berat'",
-    "VN ke grup bilang 'aku cinta kalian semua'",
-    "Ganti PP jadi foto alay 5 menit",
-    "Kirimin chat ke gebetan 'aku mimpiin kamu semalem'"
+    "Chat mantan lu bilang 'kangen'", "Update status WA 'Lagi galau berat'",
+    "VN ke grup bilang 'aku cinta kalian semua'", "Ganti PP jadi foto alay 5 menit",
+    "Kirimin chat ke gebetan 'aku mimpiin kamu semalem'", "Spam stiker 10x di grup"
 ]
 
 const truthList = [
-    "Siapa nama mantan terakhir?",
-    "Pernah bohong ke ortu soal apa?",
-    "Chat terakhir lu sama siapa?",
-    "Kapan terakhir nangis?",
-    "Rahasia apa yang belum pernah lu ceritain?"
+    "Siapa nama mantan terakhir?", "Pernah bohong ke ortu soal apa?",
+    "Chat terakhir lu sama siapa?", "Kapan terakhir nangis?",
+    "Rahasia apa yang belum pernah lu ceritain?", "Naksir siapa sekarang?"
+]
+
+const tebakGambarSoal = [
+    { img: "https://i.ibb.co/3W2Z8gX/kereta.jpg", jwb: "KERETA API", clue: "K_RE_A A_I" },
+    { img: "https://i.ibb.co/LJYJz0K/sapu.jpg", jwb: "SAPU LIDI", clue: "_A_U _I_I" },
+    { img: "https://i.ibb.co/6bW2p8z/kacamata.jpg", jwb: "KACAMATA KUDA", clue: "_A_A_A _U_A" },
+    { img: "https://i.ibb.co/2N7qKjv/meja.jpg", jwb: "MEJA MAKAN", clue: "_E_A _A_A_" }
+]
+
+const aiJawaban = [
+    "Hmm menarik, tapi gw lagi ga mood jawab.",
+    "Pertanyaan bagus! Jawabannya ada di hati lu sendiri.",
+    "Error 404: Otak gw ga nyampe. Coba tanya yg lebih gampang.",
+    "Menurut primbon digital, jawabannya adalah 42.",
+    "AI lagi cuti bro, tanya ke Google aja dulu.",
+    "Sistem lagi sibuk ngitung dosa. Coba lagi nanti.",
+    "Maaf, budget API abis. Jawab manual aja ya."
 ]
 
 async function connectBot() {
@@ -74,16 +85,13 @@ async function connectBot() {
                 connectBot()
             }
         }
-        if (connection === "open") console.log("BOT SULTAN 15 FITUR ON")
+        if (connection === "open") console.log("BOT SULTAN OFFLINE MODE ON")
     })
 
     sock.ev.on("creds.update", saveCreds)
 
     async function createSticker(buffer) {
-        return await sharp(buffer)
-        .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-        .webp()
-        .toBuffer()
+        return await sharp(buffer).resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).webp().toBuffer()
     }
 
     async function createVideoSticker(buffer) {
@@ -91,14 +99,12 @@ async function connectBot() {
         const outputPath = `./temp_${Date.now()}.webp`
         fs.writeFileSync(inputPath, buffer)
         await new Promise((resolve, reject) => {
-            ffmpeg(inputPath)
-             .on('error', reject).on('end', resolve)
-             .addOutputOptions(['-vcodec','libwebp','-vf','scale=512:512:force_original_aspect_ratio=decrease,fps=15,pad=512:512:-1:-1:color=white@0.0,split[a][b];[a]palettegen=reserve_transparent=on:transparency_color=ffffff[p];[b][p]paletteuse','-loop','0','-ss','00:00:00.0','-t','00:00:10.0','-preset','default','-an','-vsync','0'])
-             .toFormat('webp').save(outputPath)
+            ffmpeg(inputPath).on('error', reject).on('end', resolve)
+           .addOutputOptions(['-vcodec','libwebp','-vf','scale=512:512:force_original_aspect_ratio=decrease,fps=15,pad=512:512:-1:-1:color=white@0.0,split[a][b];[a]palettegen=reserve_transparent=on:transparency_color=ffffff[p];[b][p]paletteuse','-loop','0','-ss','00:00:00.0','-t','00:00:10.0','-preset','default','-an','-vsync','0'])
+           .toFormat('webp').save(outputPath)
         })
         const webp = fs.readFileSync(outputPath)
-        fs.unlinkSync(inputPath)
-        fs.unlinkSync(outputPath)
+        fs.unlinkSync(inputPath); fs.unlinkSync(outputPath)
         return webp
     }
 
@@ -117,7 +123,7 @@ async function connectBot() {
             switch (command) {
                 case "menu": {
                     let jam = moment.tz("Asia/Jakarta").format("HH:mm:ss")
-                    reply(`*BOT SULTAN 15 FITUR*\nJam: ${jam} WIB\n\n*STIKER*\n.sticker [foto/video]\n.brat <teks>\n.qc <teks>\n.toimg\n\n*ANTI STRES*\n.meme\n.quotes\n.dare\n.truth\n.jodoh <nama|nama>\n.rate <apa>\n.gantengcek\n\n*INFO*\n.ping\n.gempa\n.cuaca <kota>\n\n*GAME*\n.tebakgambar\n.suit <gunting/batu/kertas>\n\n*GROUP*\n.tagall <pesan>\n\n*AI*\n.ai <tanya>`)
+                    reply(`*BOT SULTAN OFFLINE 25 FITUR*\nJam: ${jam} WIB\n\n*STIKER*\n.sticker [foto/video]\n.brat <teks>\n.qc <teks>\n.toimg\n\n*FUN OFFLINE*\n.meme\n.quotes\n.dare\n.truth\n.jodoh <nama|nama>\n.rate <apa>\n.gantengcek\n.cantikit\n.howgay\n\n*GAME*\n.tebakgambar\n.suit <gunting/batu/kertas>\n.slot\n\n*INFO*\n.ping\n.gempa\n.cuaca <kota>\n\n*GROUP*\n.tagall <pesan>\n.hidetag <pesan>\n\n*AI OFFLINE*\n.ai <tanya>\n\n100% Anti API Turu`)
                 } break
 
                 case "ping": reply("Pong! " + (new Date() - new Date(m.messageTimestamp * 1000)) + "ms")
@@ -129,15 +135,13 @@ async function connectBot() {
                     if (msgType === 'imageMessage') {
                         reply("Bikin stiker foto...")
                         let stream = await downloadContentFromMessage(qmsg? qmsg[msgType] : m.message[msgType], 'image')
-                        let buffer = Buffer.from([])
-                        for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
+                        let buffer = Buffer.from([]); for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
                         let stickerBuffer = await createSticker(buffer)
                         await sock.sendMessage(from, { sticker: stickerBuffer }, { quoted: m })
                     } else if (msgType === 'videoMessage') {
                         reply("Bikin stiker video... Max 10 detik")
                         let stream = await downloadContentFromMessage(qmsg? qmsg[msgType] : m.message[msgType], 'video')
-                        let buffer = Buffer.from([])
-                        for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
+                        let buffer = Buffer.from([]); for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
                         let stickerBuffer = await createVideoSticker(buffer)
                         await sock.sendMessage(from, { sticker: stickerBuffer }, { quoted: m })
                     } else reply("Reply foto/video max 10 detik")
@@ -148,41 +152,49 @@ async function connectBot() {
                     if (qmsg?.stickerMessage) {
                         reply("Convert...")
                         let stream = await downloadContentFromMessage(qmsg.stickerMessage, 'sticker')
-                        let buffer = Buffer.from([])
-                        for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
+                        let buffer = Buffer.from([]); for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
                         await sock.sendMessage(from, { image: buffer }, { quoted: m })
                     } else reply("Reply stiker")
                 } break
 
+                // BRAT OFFLINE - PAKE CANVAS LOKAL
                 case "brat": {
                     if (!q) return reply(".brat halo")
                     reply("Bikin stiker...")
-                    let buffer = null
-                    try {
-                        let res = await axios.get(`https://brat.caliphdev.com/api/brat?text=${encodeURIComponent(q)}`, { responseType: 'arraybuffer', timeout: 20000 })
-                        buffer = res.data
-                    } catch {
-                        try {
-                            let res = await axios.get(`https://api.siputzx.my.id/api/m/brat?text=${encodeURIComponent(q)}`, { responseType: 'arraybuffer', timeout: 20000 })
-                            buffer = res.data
-                        } catch { return reply("API Brat turu semua") }
-                    }
+                    const canvas = require("canvas")
+                    const c = canvas.createCanvas(512, 512)
+                    const ctx = c.getContext("2d")
+                    ctx.fillStyle = "#FFFFFF"
+                    ctx.fillRect(0, 0, 512, 512)
+                    ctx.font = "bold 60px Arial"
+                    ctx.fillStyle = "#000000"
+                    ctx.textAlign = "center"
+                    ctx.fillText(q, 256, 280)
+                    const buffer = c.toBuffer()
                     let stickerBuffer = await createSticker(buffer)
                     await sock.sendMessage(from, { sticker: stickerBuffer }, { quoted: m })
                 } break
 
+                // QC OFFLINE
                 case "qc": {
                     if (!q) return reply(".qc halo")
                     reply("Bikin stiker...")
-                    let pp = await sock.profilePictureUrl(sender, 'image').catch(() => 'https://telegra.ph/file/24121c8c22d4e68e50d28.png')
-                    let nama = m.pushName || 'User'
-                    try {
-                        let { data } = await axios.get(`https://api.siputzx.my.id/api/m/qc?text=${encodeURIComponent(q)}&name=${encodeURIComponent(nama)}&url=${encodeURIComponent(pp)}`, { responseType: 'arraybuffer', timeout: 20000 })
-                        await sock.sendMessage(from, { sticker: data }, { quoted: m })
-                    } catch { reply("API QC turu") }
+                    const canvas = require("canvas")
+                    const c = canvas.createCanvas(512, 300)
+                    const ctx = c.getContext("2d")
+                    ctx.fillStyle = "#1E1E1E"
+                    ctx.fillRect(0, 0, 512, 300)
+                    ctx.font = "30px Arial"
+                    ctx.fillStyle = "#FFFFFF"
+                    ctx.fillText(m.pushName || 'User', 20, 50)
+                    ctx.font = "25px Arial"
+                    ctx.fillText(q, 20, 100)
+                    const buffer = c.toBuffer()
+                    let stickerBuffer = await createSticker(buffer)
+                    await sock.sendMessage(from, { sticker: stickerBuffer }, { quoted: m })
                 } break
 
-                // MEME OFFLINE - ANTI API TURU
+                // MEME OFFLINE
                 case "meme": {
                     let url = memeIndo[Math.floor(Math.random() * memeIndo.length)]
                     await sock.sendMessage(from, { image: { url: url }, caption: "Meme Indo Ngakak" }, { quoted: m })
@@ -194,15 +206,11 @@ async function connectBot() {
                     reply(`"${quote}"`)
                 } break
 
-                case "dare": {
-                    let d = dareList[Math.floor(Math.random() * dareList.length)]
-                    reply(`*DARE*\n\n${d}`)
-                } break
+                case "dare": reply(`*DARE*\n\n${dareList[Math.floor(Math.random() * dareList.length)]}`)
+                break
 
-                case "truth": {
-                    let t = truthList[Math.floor(Math.random() * truthList.length)]
-                    reply(`*TRUTH*\n\n${t}`)
-                } break
+                case "truth": reply(`*TRUTH*\n\n${truthList[Math.floor(Math.random() * truthList.length)]}`)
+                break
 
                 case "jodoh": {
                     if (!q.includes('|')) return reply(".jodoh Dimas|Ayu")
@@ -217,9 +225,37 @@ async function connectBot() {
                     reply(`${q} rate-nya: ${r}%\n${r > 80? 'GACOR KANG' : r > 50? 'Lumayan lah' : 'Perlu upgrade'}`)
                 } break
 
-                case "gantengcek": {
+                case "gantengcek": reply(`Tingkat kegantengan lu: ${Math.floor(Math.random() * 100)}%\n${Math.random() > 0.5? 'UWOGH PRIA IDAMAN' : 'Perlu skincare bro'}`)
+                break
+
+                case "cantikcek": reply(`Tingkat kecantikan lu: ${Math.floor(Math.random() * 100)}%\n${Math.random() > 0.5? 'UWOGH BIDADARI' : 'Udah cantik kok'}`)
+                break
+
+                case "howgay": {
                     let r = Math.floor(Math.random() * 100)
-                    reply(`Tingkat kegantengan lu: ${r}%\n${r > 80? 'UWOGH PRIA IDAMAN' : r > 50? 'Standar' : 'Perlu skincare bro'}`)
+                    reply(`${q || 'Lu'} ${r}% gay\n${r > 70? '🌈' : r > 40? 'Agak laen' : 'Straight'}`)
+                } break
+
+                // TEBAK GAMBAR OFFLINE
+                case "tebakgambar": {
+                    let s = tebakGambarSoal[Math.floor(Math.random() * tebakGambarSoal.length)]
+                    await sock.sendMessage(from, { image: { url: s.img }, caption: `*TEBAK GAMBAR*\n\nClue: ${s.clue}\n\nJawaban: ${s.jwb}` }, { quoted: m })
+                } break
+
+                case "suit": {
+                    if (!q) return reply(".suit gunting/batu/kertas")
+                    let bot = ["gunting", "batu", "kertas"][Math.floor(Math.random() * 3)]
+                    let hasil = q === bot? "SERI" : (q === "batu" && bot === "gunting") || (q === "gunting" && bot === "kertas") || (q === "kertas" && bot === "batu")? "MENANG" : "KALAH"
+                    reply(`Lu: ${q}\nBot: ${bot}\n\nHasil: *${hasil}*`)
+                } break
+
+                case "slot": {
+                    let emojis = ["🍒", "🍋", "🍊", "🍉", "🍇", "💎", "7️⃣"]
+                    let a = emojis[Math.floor(Math.random() * emojis.length)]
+                    let b = emojis[Math.floor(Math.random() * emojis.length)]
+                    let c = emojis[Math.floor(Math.random() * emojis.length)]
+                    let hasil = (a === b && b === c)? "JACKPOT! 🎉" : (a === b || b === c || a === c)? "Hampir!" : "Zonk"
+                    reply(`*SLOT*\n\n[ ${a} | ${b} | ${c} ]\n\n${hasil}`)
                 } break
 
                 case "gempa": {
@@ -229,28 +265,17 @@ async function connectBot() {
                     reply(`*INFO GEMPA BMKG*\n\nWilayah: ${i.Wilayah}\nMagnitudo: ${i.Magnitude}\nKedalaman: ${i.Kedalaman}\nWaktu: ${i.Tanggal} ${i.Jam}\nPotensi: ${i.Potensi}`)
                 } break
 
+                // CUACA PAKE OPEN-METEO - GRATIS & ANTI BLOKIR
                 case "cuaca": {
                     if (!q) return reply(".cuaca Jakarta")
                     try {
-                        let { data } = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(q)}&appid=060a6bcfa19809c2cd4d97a212b192c3&units=metric&lang=id`)
-                        reply(`*CUACA ${data.name}*\n\n${data.weather[0].description}\nSuhu: ${data.main.temp}°C\nKelembaban: ${data.main.humidity}%\nAngin: ${data.wind.speed} m/s`)
-                    } catch { reply("Kota ga ketemu / API turu") }
-                } break
-
-                case "tebakgambar": {
-                    let soal = [
-                        { img: "https://i.ibb.co/3W2Z8gX/contoh1.jpg", jwb: "KERETA API" },
-                        { img: "https://i.ibb.co/LJYJz0K/contoh2.jpg", jwb: "SAPU LIDI" }
-                    ]
-                    let s = soal[Math.floor(Math.random() * soal.length)]
-                    await sock.sendMessage(from, { image: { url: s.img }, caption: `*TEBAK GAMBAR*\n\nClue: ${s.jwb.replace(/[AIUEO]/gi, '_')}\n\nJawab langsung di chat` }, { quoted: m })
-                } break
-
-                case "suit": {
-                    if (!q) return reply(".suit gunting/batu/kertas")
-                    let bot = ["gunting", "batu", "kertas"][Math.floor(Math.random() * 3)]
-                    let hasil = q === bot? "SERI" : (q === "batu" && bot === "gunting") || (q === "gunting" && bot === "kertas") || (q === "kertas" && bot === "batu")? "MENANG" : "KALAH"
-                    reply(`Lu: ${q}\nBot: ${bot}\n\nHasil: *${hasil}*`)
+                        let { data: geo } = await axios.get(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=id`)
+                        if (!geo.results) return reply("Kota ga ketemu")
+                        let { latitude, longitude, name } = geo.results[0]
+                        let { data } = await axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&timezone=auto`)
+                        let w = data.current_weather
+                        reply(`*CUACA ${name}*\n\nSuhu: ${w.temperature}°C\nKecepatan Angin: ${w.windspeed} km/h\nKode Cuaca: ${w.weathercode}`)
+                    } catch { reply("API Cuaca turu") }
                 } break
 
                 case "tagall": {
@@ -261,24 +286,17 @@ async function connectBot() {
                     sock.sendMessage(from, { text, mentions: member }, { quoted: m })
                 } break
 
-                // AI - 1 API LUAR + FALLBACK LUCU
+                case "hidetag": {
+                    if (!isGroup) return reply("Khusus grup")
+                    let member = (await sock.groupMetadata(from)).participants.map(v => v.id)
+                    sock.sendMessage(from, { text: q || "Hidetag", mentions: member }, { quoted: m })
+                } break
+
+                // AI OFFLINE - ANTI TURU
                 case "ai": {
                     if (!q) return reply(".ai cara bahagia")
-                    reply("Mikirr...")
-                    try {
-                        let { data } = await axios.get(`https://api.simsimi.vn/v2/?text=${encodeURIComponent(q)}&lc=id`, { timeout: 15000 })
-                        if (data?.success) return reply(data.success)
-                        throw Error()
-                    } catch {
-                        // FALLBACK KALO TURU
-                        let jawaban = [
-                            "Aduh otak gw lagi loading bro, tanya yg lain dulu",
-                            "Server AI lagi istirahat, kasian dia capek",
-                            "Error 404: Jawaban tidak ditemukan, coba tanya ke Google",
-                            "Lagi maintenance bro, AI-nya lagi ngopi"
-                        ]
-                        reply(jawaban[Math.floor(Math.random() * jawaban.length)])
-                    }
+                    let jawaban = aiJawaban[Math.floor(Math.random() * aiJawaban.length)]
+                    reply(jawaban)
                 } break
             }
         } catch (e) {
