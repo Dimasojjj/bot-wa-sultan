@@ -2,9 +2,15 @@ const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion,
 const pino = require("pino")
 const axios = require("axios")
 const moment = require("moment-timezone")
-const sharp = require("sharp") // BUAT CONVERT KE WEBP ANTI ABU2
+const sharp = require("sharp")
+const ffmpeg = require("fluent-ffmpeg")
+const ffmpegPath = require("ffmpeg-static")
 const fs = require("fs")
+const { promisify } = require("util")
+const stream = require("stream")
+const pipeline = promisify(stream.pipeline)
 
+ffmpeg.setFfmpegPath(ffmpegPath)
 let pairingCodeRequested = false
 
 async function connectBot() {
@@ -33,17 +39,46 @@ async function connectBot() {
                 connectBot()
             }
         }
-        if (connection === "open") console.log("BOT FINAL FIX ON")
+        if (connection === "open") console.log("BOT FINAL VIDEO STIKER ON")
     })
 
     sock.ev.on("creds.update", saveCreds)
 
-    // FUNGSI STIKER ANTI ABU2
+    // FUNGSI STIKER FOTO
     async function createSticker(buffer) {
-        const webp = await sharp(buffer)
-           .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-           .webp()
-           .toBuffer()
+        return await sharp(buffer)
+          .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+          .webp()
+          .toBuffer()
+    }
+
+    // FUNGSI STIKER VIDEO - PAKE FFMPEG
+    async function createVideoSticker(buffer) {
+        const inputPath = `./temp_${Date.now()}.mp4`
+        const outputPath = `./temp_${Date.now()}.webp`
+        fs.writeFileSync(inputPath, buffer)
+        
+        await new Promise((resolve, reject) => {
+            ffmpeg(inputPath)
+               .on('error', reject)
+               .on('end', resolve)
+               .addOutputOptions([
+                    '-vcodec', 'libwebp',
+                    '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,fps=15,pad=512:512:-1:-1:color=white@0.0,split[a][b];[a]palettegen=reserve_transparent=on:transparency_color=ffffff[p];[b][p]paletteuse',
+                    '-loop', '0',
+                    '-ss', '00:00:00.0',
+                    '-t', '00:00:10.0',
+                    '-preset', 'default',
+                    '-an',
+                    '-vsync', '0'
+                ])
+               .toFormat('webp')
+               .save(outputPath)
+        })
+        
+        const webp = fs.readFileSync(outputPath)
+        fs.unlinkSync(inputPath)
+        fs.unlinkSync(outputPath)
         return webp
     }
 
@@ -60,24 +95,31 @@ async function connectBot() {
             switch (command) {
                 case "menu": {
                     let jam = moment.tz("Asia/Jakarta").format("HH:mm:ss")
-                    reply(`*BOT FINAL 100% WORK*\nJam: ${jam} WIB\n\n*DIJAMIN JALAN*\n.ping\n.gempa\n.jodoh <nama|nama>\n.sticker\n.toimg\n.brat <teks>\n.qc <teks>\n\n*GACHA - KALO API IDUP*\n.ai <tanya>\n.meme\n.play <judul>\n.tiktok <link>\n\nTes.ping dulu`)
+                    reply(`*BOT FINAL*\nJam: ${jam} WIB\n\n*100% JALAN*\n.ping\n.gempa\n.jodoh <nama|nama>\n.sticker [foto/video]\n.toimg\n.brat <teks>\n\n*GACHA*\n.ai <tanya>\n.play <judul>\n.meme\n\nStiker video max 10 detik`)
                 } break
 
                 case "ping": reply("Pong! Aman bro " + (new Date() - new Date(m.messageTimestamp * 1000)) + "ms")
                 break
 
-                // STICKER 100% JADI - PAKE SHARP
+                // STICKER FOTO + VIDEO JADI
                 case "sticker": case "s": {
                     let qmsg = m.message.extendedTextMessage?.contextInfo?.quotedMessage
                     let msgType = qmsg? Object.keys(qmsg)[0] : Object.keys(m.message)[0]
-                    if (msgType === 'imageMessage' || msgType === 'videoMessage') {
-                        reply("Bikin stiker...")
-                        let stream = await downloadContentFromMessage(qmsg? qmsg[msgType] : m.message[msgType], msgType.replace('Message', ''))
+                    if (msgType === 'imageMessage') {
+                        reply("Bikin stiker foto...")
+                        let stream = await downloadContentFromMessage(qmsg? qmsg[msgType] : m.message[msgType], 'image')
                         let buffer = Buffer.from([])
                         for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
-                        let stickerBuffer = await createSticker(buffer) // CONVERT WEBP ANTI ABU2
+                        let stickerBuffer = await createSticker(buffer)
                         await sock.sendMessage(from, { sticker: stickerBuffer }, { quoted: m })
-                    } else reply("Reply gambar/video pake.sticker")
+                    } else if (msgType === 'videoMessage') {
+                        reply("Bikin stiker video... Max 10 detik")
+                        let stream = await downloadContentFromMessage(qmsg? qmsg[msgType] : m.message[msgType], 'video')
+                        let buffer = Buffer.from([])
+                        for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
+                        let stickerBuffer = await createVideoSticker(buffer) // PAKE FFMPEG
+                        await sock.sendMessage(from, { sticker: stickerBuffer }, { quoted: m })
+                    } else reply("Reply foto/video max 10 detik pake.sticker")
                 } break
 
                 case "toimg": {
@@ -91,35 +133,40 @@ async function connectBot() {
                     } else reply("Reply stiker pake.toimg")
                 } break
 
+                // BRAT FIX - 3 API CADANGAN
                 case "brat": {
                     if (!q) return reply(".brat halo")
                     reply("Bikin stiker...")
+                    let success = false
                     try {
                         let { data } = await axios.get(`https://brat.caliphdev.com/api/brat?text=${encodeURIComponent(q)}`, { responseType: 'arraybuffer', timeout: 20000 })
                         await sock.sendMessage(from, { sticker: data }, { quoted: m })
-                    } catch { reply("API Brat turu") }
+                        success = true
+                    } catch {
+                        try {
+                            let { data } = await axios.get(`https://api.siputzx.my.id/api/m/brat?text=${encodeURIComponent(q)}`, { responseType: 'arraybuffer', timeout: 20000 })
+                            await sock.sendMessage(from, { sticker: data }, { quoted: m })
+                            success = true
+                        } catch {
+                            try {
+                                let { data } = await axios.get(`https://api.zenkey.my.id/api/maker/brat?text=${encodeURIComponent(q)}`, { responseType: 'arraybuffer', timeout: 20000 })
+                                await sock.sendMessage(from, { sticker: data }, { quoted: m })
+                                success = true
+                            } catch { }
+                        }
+                    }
+                    if (!success) reply("Semua API Brat turu")
                 } break
 
-                case "qc": {
-                    if (!q) return reply(".qc halo")
-                    reply("Bikin stiker...")
-                    let pp = await sock.profilePictureUrl(m.key.participant || from, 'image').catch(() => 'https://telegra.ph/file/24121c8c22d4e68e50d28.png')
-                    let nama = m.pushName || 'User'
-                    try {
-                        let { data } = await axios.get(`https://api.siputzx.my.id/api/m/qc?text=${encodeURIComponent(q)}&name=${encodeURIComponent(nama)}&url=${encodeURIComponent(pp)}`, { responseType: 'arraybuffer', timeout: 20000 })
-                        await sock.sendMessage(from, { sticker: data }, { quoted: m })
-                    } catch { reply("API QC turu") }
-                } break
-
-                // GEMPA - BMKG ASLI JADI PASTI JALAN
+                // GEMPA - BMKG ASLI
                 case "gempa": {
                     let { data } = await axios.get(`https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json`, { timeout: 10000 })
                     let i = data?.Infogempa?.gempa
                     if (!i) return reply("BMKG lagi turu")
-                    reply(`*INFO GEMPA BMKG*\n\nWilayah: ${i.Wilayah}\nMagnitudo: ${i.Magnitude}\nKedalaman: ${i.Kedalaman}\nWaktu: ${i.Tanggal} ${i.Jam}\nPotensi: ${i.Potensi}\n\nSumber: BMKG`)
+                    reply(`*INFO GEMPA BMKG*\n\nWilayah: ${i.Wilayah}\nMagnitudo: ${i.Magnitude}\nKedalaman: ${i.Kedalaman}\nWaktu: ${i.Tanggal} ${i.Jam}\nPotensi: ${i.Potensi}`)
                 } break
 
-                // JODOH - OFFLINE ANTI ERROR
+                // JODOH - OFFLINE
                 case "jodoh": {
                     if (!q.includes('|')) return reply(".jodoh Dimas|Ayu")
                     let [n1, n2] = q.split('|')
@@ -127,59 +174,33 @@ async function connectBot() {
                     reply(`JODOH\n\n${n1} LOVE ${n2}\nKecocokan: ${p}%\n${p > 70? 'Jodoh gas nikah' : p > 40? 'Lumayan' : 'Temenan aja'}`)
                 } break
 
-                // MEME - 3 API CADANGAN
+                // MEME - API LUAR NEGERI
                 case "meme": {
                     reply("Cari meme...")
-                    let url = null
                     try {
-                        let { data } = await axios.get(`https://api.siputzx.my.id/api/r/memeindo`, { timeout: 10000 })
-                        url = data?.data?.url || data?.url
-                    } catch {
-                        try {
-                            let { data } = await axios.get(`https://api.lolhuman.xyz/api/meme/memeindo`, { timeout: 10000 })
-                            url = data?.result
-                        } catch { url = null }
-                    }
-                    if (!url) return reply("Semua API Meme turu bro")
-                    await sock.sendMessage(from, { image: { url: url }, caption: "Meme Indo" }, { quoted: m })
+                        let { data } = await axios.get(`https://meme-api.com/gimme/memes`, { timeout: 10000 })
+                        await sock.sendMessage(from, { image: { url: data?.url }, caption: data?.title || "Meme" }, { quoted: m })
+                    } catch { reply("API Meme luar juga turu") }
                 } break
 
-                // AI - 2 API CADANGAN
+                // AI - API LUAR NEGERI
                 case "ai": {
                     if (!q) return reply(".ai cara bahagia")
                     reply("Mikirr...")
                     try {
-                        let { data } = await axios.get(`https://api.siputzx.my.id/api/ai/gpt3?prompt=Kamu asisten kocak&content=${encodeURIComponent(q)}`, { timeout: 20000 })
-                        reply(data?.data || "AI turu")
-                    } catch {
-                        try {
-                            let { data } = await axios.get(`https://api.ryzendesu.vip/api/ai/v2/chatgpt?text=${encodeURIComponent(q)}`, { timeout: 20000 })
-                            reply(data?.response || "AI turu")
-                        } catch { reply("Semua AI turu") }
-                    }
+                        let { data } = await axios.get(`https://api.simsimi.vn/v2/?text=${encodeURIComponent(q)}&lc=id`, { timeout: 20000 })
+                        reply(data?.success || "AI turu")
+                    } catch { reply("AI turu semua") }
                 } break
 
-                // PLAY - 2 API CADANGAN
+                // PLAY - HAPUS DULU, YT SUSAH
                 case "play": {
-                    if (!q) return reply(".play dermaga biru")
-                    reply("Cari lagu...")
-                    let url = null
-                    try {
-                        let { data } = await axios.get(`https://api.siputzx.my.id/api/d/ytmp3?query=${encodeURIComponent(q)}`, { timeout: 30000 })
-                        url = data?.data?.dl || data?.data?.download?.url
-                    } catch {
-                        try {
-                            let { data } = await axios.get(`https://api.ryzendesu.vip/api/downloader/ytmp3?query=${encodeURIComponent(q)}`, { timeout: 30000 })
-                            url = data?.data?.download?.url
-                        } catch { url = null }
-                    }
-                    if (!url) return reply("Lagu ga ketemu / semua API turu")
-                    await sock.sendMessage(from, { audio: { url: url }, mimetype: 'audio/mpeg' }, { quoted: m })
+                    reply("Fitur.play lagi maintenance\nYouTube blokir Railway. Pake.tiktok aja dulu")
                 } break
             }
         } catch (e) {
             console.log("ERROR:", command, e.message)
-            reply(`Error: ${e.message}\nCoba lagi 1 menit`)
+            reply(`Error: ${e.message}`)
         }
     })
 }
